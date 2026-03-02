@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="icon" type="image/svg+xml" href="/vite.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Счетчик недели</title>
+	</head>
+	<body>
+		<main class="layout">
+			<section class="counter" aria-live="polite">
+				<p class="counter__label">Текущая неделя</p>
+				<h1 id="week-text" class="counter__value">Loading...</h1>
+				<p id="anchor-info" class="counter__meta"></p>
+				<p id="status" class="counter__status"></p>
+			</section>
+
+			<section class="schedule" aria-label="Schedule">
+				<article id="odd-card" class="schedule__card">
+					<img src="/odd.png" alt="Schedule for odd week" loading="lazy" />
+				</article>
+				<article id="even-card" class="schedule__card">
+					<img src="/even.png" alt="Schedule for even week" loading="lazy" />
+				</article>
+			</section>
+
+			<details class="admin">
+				<summary>Edit week config</summary>
+
+				<div id="auth-block" class="admin__block">
+					<form id="unlock-form" class="form">
+						<label>
+							Password
+							<input
+								id="admin-password"
+								name="password"
+								type="password"
+								autocomplete="current-password"
+								required
+							/>
+						</label>
+						<button type="submit">Unlock editor</button>
+					</form>
+					<p id="unlock-message" class="form__message"></p>
+				</div>
+
+				<div id="editor-block" class="admin__block hidden">
+					<p id="whoami"></p>
+					<form id="config-form" class="form">
+						<div id="count-mode-fields">
+							<label>
+								Current week number
+								<input id="count-week" name="countWeek" type="number" min="1" step="1" />
+							</label>
+						</div>
+						<div id="anchor-mode-fields" class="hidden">
+							<label>
+								Base date (Monday)
+								<input id="anchor-date" name="anchorDate" type="date" />
+							</label>
+							<label>
+								Week number at base date
+								<input id="anchor-week" name="anchorWeek" type="number" min="1" step="1" />
+							</label>
+						</div>
+						<button type="submit">Save to Appwrite</button>
+					</form>
+					<button id="lock" class="logout" type="button">Lock editor</button>
+					<p id="save-message" class="form__message"></p>
+				</div>
+			</details>
+		</main>
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>
