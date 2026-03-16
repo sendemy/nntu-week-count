@@ -77,64 +77,6 @@ body {
 	box-shadow: 0 10px 26px rgba(29, 154, 95, 0.2);
 }
 
-.admin {
-	border-radius: 18px;
-	padding: 14px 18px;
-	background: #ffffff;
-	box-shadow: 0 8px 24px rgba(16, 32, 53, 0.08);
-}
-
-.admin summary {
-	cursor: pointer;
-	font-weight: 600;
-}
-
-.admin__block {
-	margin-top: 12px;
-}
-
-.hidden {
-	display: none;
-}
-
-.form {
-	display: grid;
-	gap: 10px;
-}
-
-.form label {
-	display: grid;
-	gap: 6px;
-	font-size: 0.95rem;
-}
-
-input,
-button {
-	border-radius: 10px;
-	border: 1px solid #cad5e4;
-	padding: 10px 12px;
-	font: inherit;
-}
-
-button {
-	cursor: pointer;
-	background: #102035;
-	color: #ffffff;
-	border: none;
-}
-
-.logout {
-	margin-top: 10px;
-	background: #8f2d2d;
-}
-
-.form__message {
-	margin: 8px 0 0;
-	color: #4c6079;
-	font-size: 0.9rem;
-	min-height: 1.2em;
-}
-
 @media (min-width: 900px) {
 	.schedule {
 		grid-template-columns: 1fr 1fr;

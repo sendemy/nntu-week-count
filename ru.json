@@ -1,0 +1,21 @@
+{
+  "pageTitle": "Счетчик учебной недели",
+  "counterLabel": "Текущая учебная неделя",
+  "loading": "Загрузка...",
+  "scheduleAriaLabel": "Расписание",
+  "oddWeekAlt": "Расписание для нечетной недели",
+  "evenWeekAlt": "Расписание для четной недели",
+  "statusLocalDefault": "Используются локальные значения по умолчанию.",
+  "statusLoadFailed": "Не удалось загрузить настройки. Проверь консоль и переменные окружения.",
+  "statusRemoteDisabled": "Удаленные настройки отключены: добавь VITE_APPWRITE_DATABASE_ID и VITE_APPWRITE_TABLE_ID.",
+  "statusAnchorCalculated": "Неделя рассчитана от базовой даты.",
+  "statusTableFallback": "Не удалось загрузить конфиг из таблицы Appwrite. Используется локальный fallback.",
+  "weekEven": "четная",
+  "weekOdd": "нечетная",
+  "weekFormat": "Неделя {weekNumber}, {parityLabel}",
+  "missingTableConfig": "Не заданы параметры таблицы Appwrite.",
+  "noRowsFound": "В таблице Appwrite нет строк.",
+  "countStatusNoRollover": "В таблице сохранена неделя {storedCount}. После последнего обновления новая неделя еще не началась.",
+  "countStatusRollover": "В таблице была сохранена неделя {storedCount}. С последнего обновления прошло {weeksPassed} нед.",
+  "countStatusRolloverOne": "В таблице была сохранена неделя {storedCount}. С последнего обновления прошла {weeksPassed} нед."
+}

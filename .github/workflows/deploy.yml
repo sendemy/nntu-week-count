@@ -37,7 +37,7 @@ jobs:
                   VITE_APPWRITE_ENDPOINT: ${{ secrets.VITE_APPWRITE_ENDPOINT }}
                   VITE_APPWRITE_DATABASE_ID: ${{ secrets.VITE_APPWRITE_DATABASE_ID }}
                   VITE_APPWRITE_TABLE_ID: ${{ secrets.VITE_APPWRITE_TABLE_ID }}
-                  VITE_ADMIN_PASSWORD: ${{ secrets.VITE_ADMIN_PASSWORD }}
+                  VITE_APPWRITE_ROW_ID: ${{ secrets.VITE_APPWRITE_ROW_ID }}
               run: npm run build
 
             - name: Upload artifact

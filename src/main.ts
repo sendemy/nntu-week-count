@@ -1,4 +1,5 @@
 import type { Models } from 'appwrite';
+import translations from '../ru.json';
 import { tablesDB } from './lib/appwrite';
 import './styles.css';
 
@@ -11,7 +12,6 @@ const DEFAULT_ANCHOR = {
 };
 
 type WeekParity = 'odd' | 'even';
-type DataMode = 'count' | 'anchor';
 
 type WeekConfig = {
 	anchorDate: string;
@@ -24,198 +24,117 @@ type WeekRow = Models.Row & {
 	anchorWeek?: number;
 };
 
+type CountModeMeta = {
+	storedCount: number;
+	lastUpdatedAt: string;
+};
+
+type ResolvedWeek = {
+	weekNumber: number;
+	meta: CountModeMeta | null;
+};
+
 const env = {
 	databaseId: import.meta.env.VITE_APPWRITE_DATABASE_ID as string | undefined,
 	tableId: import.meta.env.VITE_APPWRITE_TABLE_ID as string | undefined,
 	rowId: import.meta.env.VITE_APPWRITE_ROW_ID as string | undefined,
-	adminPassword: import.meta.env.VITE_ADMIN_PASSWORD as string | undefined,
 };
 
+document.documentElement.lang = 'ru';
+document.title = translations.pageTitle;
+
+const counterLabel = mustFind<HTMLParagraphElement>('#counter-label');
 const weekText = mustFind<HTMLHeadingElement>('#week-text');
 const statusEl = mustFind<HTMLParagraphElement>('#status');
+const scheduleSection = mustFind<HTMLElement>('#schedule-section');
 const oddCard = mustFind<HTMLElement>('#odd-card');
 const evenCard = mustFind<HTMLElement>('#even-card');
+const oddImage = mustFind<HTMLImageElement>('#odd-image');
+const evenImage = mustFind<HTMLImageElement>('#even-image');
 
-const authBlock = mustFind<HTMLDivElement>('#auth-block');
-const editorBlock = mustFind<HTMLDivElement>('#editor-block');
-const unlockForm = mustFind<HTMLFormElement>('#unlock-form');
-const configForm = mustFind<HTMLFormElement>('#config-form');
-const unlockMessage = mustFind<HTMLParagraphElement>('#unlock-message');
-const saveMessage = mustFind<HTMLParagraphElement>('#save-message');
-const whoami = mustFind<HTMLParagraphElement>('#whoami');
-const lockBtn = mustFind<HTMLButtonElement>('#lock');
-
-const countModeFields = mustFind<HTMLDivElement>('#count-mode-fields');
-const anchorModeFields = mustFind<HTMLDivElement>('#anchor-mode-fields');
-
-const countWeekInput = mustFind<HTMLInputElement>('#count-week');
-const anchorDateInput = mustFind<HTMLInputElement>('#anchor-date');
-const anchorWeekInput = mustFind<HTMLInputElement>('#anchor-week');
-
-let currentConfig: WeekConfig = {
-	anchorDate: DEFAULT_ANCHOR.date,
-	anchorWeek: DEFAULT_ANCHOR.week,
-};
-let currentRowId: string | null = null;
-let dataMode: DataMode = 'count';
-
-renderWeek(weekFromAnchor(currentConfig));
+applyTranslations();
+renderWeek(
+	weekFromAnchor({
+		anchorDate: DEFAULT_ANCHOR.date,
+		anchorWeek: DEFAULT_ANCHOR.week,
+	}),
+	translations.statusLocalDefault
+);
 boot().catch((error) => {
 	console.error(error);
-	statusEl.textContent = 'Failed to load settings. Check console and environment variables.';
+	statusEl.textContent = translations.statusLoadFailed;
 });
 
 async function boot() {
-	const hasRemoteConfig = hasAppwriteConfig();
-
-	if (!hasRemoteConfig) {
-		statusEl.textContent =
-			'Remote settings are disabled: add VITE_APPWRITE_DATABASE_ID and VITE_APPWRITE_TABLE_ID.';
-		bindEvents();
+	if (!hasAppwriteConfig()) {
+		statusEl.textContent = translations.statusRemoteDisabled;
 		return;
 	}
 
 	try {
 		const row = await getWeekRow();
 		const resolved = resolveWeekFromRow(row);
-		dataMode = resolved.mode;
-		setModeUI(dataMode);
-		currentRowId = row.$id;
 
-		if (dataMode === 'count') {
-			countWeekInput.value = String(resolved.weekNumber);
-			renderWeek(resolved.weekNumber);
-		} else {
-			currentConfig = resolved.config;
-			fillAnchorEditor(resolved.config);
-			renderWeek(resolved.weekNumber);
+		if (resolved.meta) {
+			renderWeek(resolved.weekNumber, buildCountModeStatus(resolved.meta));
+			return;
 		}
+
+		renderWeek(resolved.weekNumber, translations.statusAnchorCalculated);
 	} catch (error) {
 		console.error(error);
-		statusEl.textContent = 'Failed to load config from Appwrite table. Local fallback is used.';
+		statusEl.textContent = translations.statusTableFallback;
 	}
-
-	bindEvents();
 }
 
-function bindEvents() {
-	unlockForm.addEventListener('submit', (event) => {
-		event.preventDefault();
-		unlockMessage.textContent = '';
-
-		const formData = new FormData(unlockForm);
-		const password = String(formData.get('password') ?? '');
-		const expectedPassword = env.adminPassword ?? '';
-
-		if (!expectedPassword) {
-			unlockMessage.textContent = 'VITE_ADMIN_PASSWORD is not set.';
-			return;
-		}
-
-		if (password !== expectedPassword) {
-			unlockMessage.textContent = 'Wrong password.';
-			return;
-		}
-
-		setEditorVisible(true);
-		unlockForm.reset();
-	});
-
-	configForm.addEventListener('submit', async (event) => {
-		event.preventDefault();
-		saveMessage.textContent = 'Saving...';
-
-		try {
-			if (dataMode === 'count') {
-				const nextWeek = Number(countWeekInput.value);
-				if (Number.isNaN(nextWeek) || nextWeek < 1) {
-					saveMessage.textContent = 'Enter a valid week number.';
-					return;
-				}
-
-				await updateWeekRow({ count: nextWeek });
-				renderWeek(nextWeek);
-				saveMessage.textContent = 'Saved.';
-				return;
-			}
-
-			const nextConfig: WeekConfig = {
-				anchorDate: anchorDateInput.value,
-				anchorWeek: Number(anchorWeekInput.value),
-			};
-
-			if (!nextConfig.anchorDate || Number.isNaN(nextConfig.anchorWeek) || nextConfig.anchorWeek < 1) {
-				saveMessage.textContent = 'Enter a valid date and week number.';
-				return;
-			}
-
-			await updateWeekRow({ anchorDate: nextConfig.anchorDate, anchorWeek: nextConfig.anchorWeek });
-			currentConfig = nextConfig;
-			const weekNumber = weekFromAnchor(nextConfig);
-			renderWeek(weekNumber);
-			saveMessage.textContent = 'Saved.';
-		} catch (error) {
-			console.error(error);
-			saveMessage.textContent = 'Save failed. Check table row permissions and columns.';
-		}
-	});
-
-	lockBtn.addEventListener('click', () => {
-		setEditorVisible(false);
-		saveMessage.textContent = '';
-		unlockMessage.textContent = 'Editor locked.';
-	});
+function applyTranslations() {
+	counterLabel.textContent = translations.counterLabel;
+	weekText.textContent = translations.loading;
+	scheduleSection.setAttribute('aria-label', translations.scheduleAriaLabel);
+	oddImage.alt = translations.oddWeekAlt;
+	evenImage.alt = translations.evenWeekAlt;
 }
 
-function resolveWeekFromRow(row: WeekRow) {
+function resolveWeekFromRow(row: WeekRow): ResolvedWeek {
 	const hasAnchor = typeof row.anchorDate === 'string' && typeof row.anchorWeek === 'number';
+
 	if (hasAnchor) {
 		const config: WeekConfig = {
 			anchorDate: row.anchorDate as string,
 			anchorWeek: Number(row.anchorWeek),
 		};
+
 		return {
-			mode: 'anchor' as const,
 			weekNumber: weekFromAnchor(config),
-			config,
+			meta: null,
 		};
 	}
 
 	const count = Number(row.count ?? DEFAULT_ANCHOR.week);
+	const storedCount = Number.isNaN(count) || count < 1 ? DEFAULT_ANCHOR.week : count;
+	const meta: CountModeMeta = {
+		storedCount,
+		lastUpdatedAt: row.$updatedAt,
+	};
+
 	return {
-		mode: 'count' as const,
-		weekNumber: Number.isNaN(count) || count < 1 ? DEFAULT_ANCHOR.week : count,
-		config: {
-			anchorDate: DEFAULT_ANCHOR.date,
-			anchorWeek: DEFAULT_ANCHOR.week,
-		},
+		weekNumber: storedCount + weeksSinceWeekStart(meta.lastUpdatedAt),
+		meta,
 	};
 }
 
-function setModeUI(mode: DataMode) {
-	countModeFields.classList.toggle('hidden', mode !== 'count');
-	anchorModeFields.classList.toggle('hidden', mode !== 'anchor');
-}
-
-function renderWeek(weekNumber: number) {
+function renderWeek(weekNumber: number, statusMessage = '') {
 	const parity: WeekParity = weekNumber % 2 === 0 ? 'even' : 'odd';
-	const parityLabel = parity === 'even' ? 'Четная' : 'Нечетная';
+	const parityLabel = parity === 'even' ? translations.weekEven : translations.weekOdd;
 
-	weekText.textContent = `Неделя ${weekNumber}, ${parityLabel}`;
+	weekText.textContent = formatString(translations.weekFormat, {
+		weekNumber: String(weekNumber),
+		parityLabel,
+	});
+	statusEl.textContent = statusMessage;
 
 	oddCard.classList.toggle('active', parity === 'odd');
 	evenCard.classList.toggle('active', parity === 'even');
-}
-
-function fillAnchorEditor(config: WeekConfig) {
-	anchorDateInput.value = config.anchorDate;
-	anchorWeekInput.value = String(config.anchorWeek);
-}
-
-function setEditorVisible(isVisible: boolean) {
-	authBlock.classList.toggle('hidden', isVisible);
-	editorBlock.classList.toggle('hidden', !isVisible);
-	whoami.textContent = isVisible ? 'Editor unlocked.' : '';
 }
 
 function hasAppwriteConfig() {
@@ -224,7 +143,7 @@ function hasAppwriteConfig() {
 
 async function getWeekRow(): Promise<WeekRow> {
 	if (!env.databaseId || !env.tableId) {
-		throw new Error('Missing Appwrite table configuration');
+		throw new Error(translations.missingTableConfig);
 	}
 
 	if (env.rowId) {
@@ -241,39 +160,72 @@ async function getWeekRow(): Promise<WeekRow> {
 	});
 
 	if (!rows.rows[0]) {
-		throw new Error('No rows found in table.');
+		throw new Error(translations.noRowsFound);
 	}
 
 	return rows.rows[0] as WeekRow;
-}
-
-async function updateWeekRow(data: Record<string, unknown>) {
-	if (!env.databaseId || !env.tableId) {
-		throw new Error('Missing Appwrite table configuration');
-	}
-
-	const rowId = env.rowId ?? currentRowId;
-	if (!rowId) {
-		throw new Error('Unknown row ID. Set VITE_APPWRITE_ROW_ID or ensure the row is readable.');
-	}
-
-	await tablesDB.updateRow({
-		databaseId: env.databaseId,
-		tableId: env.tableId,
-		rowId,
-		data,
-	});
 }
 
 function weekFromAnchor(config: WeekConfig) {
 	const today = startOfDay(new Date());
 	const anchorDate = parseDateInput(config.anchorDate);
 	const diffWeeks = Math.floor((today.getTime() - anchorDate.getTime()) / WEEK_MS);
+
 	return Math.max(1, config.anchorWeek + diffWeeks);
+}
+
+function weeksSinceWeekStart(isoDate: string) {
+	const nowWeekStart = getMoscowWeekStart(Date.now());
+	const sourceWeekStart = getMoscowWeekStart(Date.parse(isoDate));
+
+	return Math.max(0, Math.floor((nowWeekStart - sourceWeekStart) / WEEK_MS));
+}
+
+function getMoscowWeekStart(timestamp: number) {
+	const formatter = new Intl.DateTimeFormat('en-CA', {
+		timeZone: 'Europe/Moscow',
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+	});
+	const parts = formatter.formatToParts(new Date(timestamp));
+	const year = Number(parts.find((part) => part.type === 'year')?.value);
+	const month = Number(parts.find((part) => part.type === 'month')?.value);
+	const day = Number(parts.find((part) => part.type === 'day')?.value);
+	const utcMidnight = Date.UTC(year, month - 1, day);
+	const weekday = new Date(utcMidnight).getUTCDay();
+	const mondayOffset = (weekday + 6) % 7;
+
+	return utcMidnight - mondayOffset * DAY_MS;
+}
+
+function buildCountModeStatus(meta: CountModeMeta | null) {
+	if (!meta) {
+		return '';
+	}
+
+	const weeksPassed = weeksSinceWeekStart(meta.lastUpdatedAt);
+
+	if (weeksPassed === 0) {
+		return formatString(translations.countStatusNoRollover, {
+			storedCount: String(meta.storedCount),
+		});
+	}
+
+	const template = weeksPassed === 1 ? translations.countStatusRolloverOne : translations.countStatusRollover;
+	return formatString(template, {
+		storedCount: String(meta.storedCount),
+		weeksPassed: String(weeksPassed),
+	});
+}
+
+function formatString(template: string, values: Record<string, string>) {
+	return template.replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? '');
 }
 
 function parseDateInput(value: string) {
 	const [year, month, day] = value.split('-').map((chunk) => Number(chunk));
+
 	return startOfDay(new Date(year, month - 1, day));
 }
 
